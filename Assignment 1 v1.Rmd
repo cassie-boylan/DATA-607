@@ -1,0 +1,97 @@
+
+```{r load libraries}
+library(RCurl)
+library(dplyr)
+library(tidyverse)
+library(stringr)
+```
+
+```{r import data}
+x <- getURL("https://raw.githubusercontent.com/fivethirtyeight/data/master/non-voters/nonvoters_data.csv")
+
+non_voters <- read.csv(text=x)
+```
+
+```{r alternate dataset}
+x <- getURL("https://raw.githubusercontent.com/fivethirtyeight/data/master/covid-geography/mmsa-icu-beds.csv")
+
+state.icu.beds <- read.csv(text = x)
+```
+
+```{r renaming columns}
+names(state.icu.beds)[1] <- "city_state"
+names(state.icu.beds)[7] <- "high_risk_population"
+names(state.icu.beds)[3] <- "high_risk_people_per_ICU_bed"
+names(state.icu.beds)[4] <- "high_risk_people_per_hospital"
+state.icu.beds <- na.omit(state.icu.beds)
+state.icu.beds$state = str_sub(state.icu.beds$city_state,-2)
+
+state.icu.beds$high_risk_people_per_ICU_bed <- round(state.icu.beds$high_risk_people_per_ICU_bed,digits=0)
+state.icu.beds$high_risk_people_per_hospital <- round(state.icu.beds$high_risk_people_per_hospital,digits=0)
+
+icu_beds <- state.icu.beds$icu_beds
+hospitals <- state.icu.beds$hospitals
+```
+
+## Basic Summary Statistics
+```{r basic summary statistics}
+fivenum(hospitals)
+fivenum(icu_beds)
+
+hist(hospitals,
+main="Hospitals per US city",
+xlim=c(0,60),
+col="blue")
+```
+
+## view how many cities per state were analyzed & select state to focus
+```{r}
+table(state.icu.beds$state)
+
+
+by_state_FL <- subset(state.icu.beds, state == 'FL', select = c("city_state", "icu_beds", "hospitals", "high_risk_population", "high_risk_people_per_ICU_bed","high_risk_people_per_hospital"))
+
+icu_beds <- by_state_FL$icu_beds
+hospitals <- by_state_FL$hospitals
+at_risk <- by_state_FL$high_risk_population
+
+fivenum(hospitals)
+fivenum(icu_beds)
+
+hist(hospitals,
+main="Hospitals per FL city",
+xlim=c(0,30),
+col="blue")
+
+
+by_state_FL$icu_beds_per_10k <- round((icu_beds/at_risk)*10000,digits=2)
+icu_per_10k <- by_state_FL$icu_beds_per_10k
+
+
+fivenum(icu_per_10k)
+hist(icu_per_10k,
+main="ICU beds per 10k of high risk pop",
+xlab="beds per every 10k",
+xlim=c(0,20),
+col="chartreuse4")
+
+
+
+by_state_FL$ic_beds_per_hospital <- round(icu_beds/hospitals,digits=0)
+beds_per_hospital <- by_state_FL$ic_beds_per_hospital
+
+
+fivenum(beds_per_hospital)
+hist(beds_per_hospital,
+main="Average ICU beds per hospital",
+xlab="beds per hospital per FL metro area",
+xlim=c(0,60),
+col="blue")
+```
+
+
+
+
+
+```
+
