@@ -1,0 +1,162 @@
+### Assignment 1
+Cassandra Boylan
+08/29/2021
+
+# Introduction
+
+In this analysis, I took a look at a dataset that examined the "at risk population" within various metro areas around the United States.  The dataset also captured the number of hospitals and icu beds available in each metro area as a measure of how prepared each may be in meeting the health demands of the current pandemic.
+
+[link](https://fivethirtyeight.com/features/how-one-high-risk-community-in-rural-south-carolina-is-bracing-for-covid-19/)
+
+```{r load libraries message=FALSE}
+
+library(dplyr)
+library(tidyverse)
+library(stringr)
+```
+
+##Importing Dataset
+```{r import dataset}
+
+urlfile=("https://raw.githubusercontent.com/fivethirtyeight/data/master/covid-geography/mmsa-icu-beds.csv")
+
+state_icu_beds<-read_csv(url(urlfile),show_col_types = FALSE)
+```
+
+## Renaming Columns
+```{r}
+names(state_icu_beds)[1] <- "city_state"
+names(state_icu_beds)[7] <- "high_risk_population"
+names(state_icu_beds)[3] <- "high_risk_pop_per_icu_bed"
+names(state_icu_beds)[4] <- "high_risk_pop_per_hospital"
+```
+
+```{r message=FALSE, warning=FALSE}
+state_icu_beds_clean <- separate(state_icu_beds, col=city_state, into=c('metro_area', 'state'), sep=', ')
+```
+
+
+```{r round to whole numbers}
+state_icu_beds_clean$high_risk_pop_per_icu_bed <- round(state_icu_beds_clean$high_risk_pop_per_icu_bed,digits=0)
+state_icu_beds_clean$high_risk_pop_per_hospital <- round(state_icu_beds_clean$high_risk_pop_per_hospital,digits=0)
+
+```
+
+
+```{r drop all rows with NA}
+state_icu_beds_clean <- na.omit(state_icu_beds_clean)
+```
+
+## Summary Statistics of Hospitals per Metro Area
+```{r summary statistics-hospitals}
+
+hospitals <- state_icu_beds_clean$hospitals
+
+fivenum(hospitals)
+
+hist(hospitals,
+main="Hospitals per US metro area",
+xlim=c(0,60),
+col="blue")
+```
+
+## Summary Statistics of ICU beds per Metro Area
+```{r summary statistics-icu_beds}
+icu_beds <- state_icu_beds_clean$icu_beds
+fivenum(icu_beds)
+```
+
+##Metro Area with fewest count of ICU beds
+```{r}
+print ("Metro Area with fewest icu beds")
+state_icu_beds_clean[which.min(state_icu_beds_clean$icu_beds),0:2]
+```
+
+##Metro Area with greatest count of ICU beds
+```{r}
+state_icu_beds_clean[which.max(state_icu_beds_clean$icu_beds),0:2]
+```
+
+### Number of urban areas analyzed per state 
+```{r}
+metro_by_state <- state_icu_beds_clean %>% count(state, sort=TRUE)
+head(metro_by_state)
+```
+
+## Subset to Metro Areas in Florida
+```{r}
+by_state_FL <- subset(state_icu_beds_clean, state == 'FL', select = c("metro_area", "icu_beds", "hospitals", "high_risk_population", "high_risk_pop_per_icu_bed","high_risk_pop_per_hospital"))
+
+icu_beds_FL <- by_state_FL$icu_beds
+hospitals_FL <- by_state_FL$hospitals
+at_risk_FL <- by_state_FL$high_risk_population
+```
+
+## Distribution of Hospitals per Metro Area in FL
+```{r}
+fivenum(hospitals_FL)
+
+hist(hospitals_FL,
+main="Hospitals per FL metro area",
+xlim=c(0,30),
+col="blue")
+```
+## FL Metro Area with highest count of Hospitals
+```{r}
+by_state_FL[which.max(by_state_FL$hospitals),]
+```
+## Range of ICU Beds in FL by Metro Area
+```{r}
+select(by_state_FL, metro_area, icu_beds,hospitals,high_risk_pop_per_icu_bed) %>% arrange(icu_beds)
+```
+
+```{r}
+fivenum(icu_beds_FL)
+```
+
+## Determine Ratio of ICU beds available for Every 10k of population deemed at risk in FL
+```{r}
+by_state_FL$icu_beds_per_10k <- round(icu_beds_FL/(at_risk_FL/10000),digits=2)
+icu_per_10k <- by_state_FL$icu_beds_per_10k
+
+
+fivenum(icu_per_10k)
+hist(icu_per_10k,
+main="ICU beds per 10k of high risk pop",
+xlab="beds per every 10k",
+xlim=c(0,10),
+col="chartreuse4")
+```
+
+## Determine Avg ICU Beds per Hospital in FL metro areas
+```{r icu beds per hospital}
+by_state_FL$icu_beds_per_hospital <- round(icu_beds_FL/hospitals_FL,digits=0)
+beds_per_hospital <- by_state_FL$icu_beds_per_hospital
+
+fivenum(beds_per_hospital)
+hist(beds_per_hospital,
+main="Average ICU beds per hospital",
+xlab="beds per hospital per FL metro area",
+xlim=c(0,60),
+col="blue")
+```
+
+# Conclusion
+
+I wanted to see the number of hospitals available on average per each metro area and the distribution frequency of hospital count per metro area.
+As we can see, the number skews heavily to less than 10 for the majority of metro areas surveyed, with an average of 9 and IQR of 5-18.
+
+It was striking to see the range of ICU beds available from less than 10 to over 2500.  Unsurprisingly, the metro area with the largest number of beds serves the greater Los Angeles area while the metro area with the fewest is located in the Midwest.
+
+I chose to subset the dataset to focus on the state of Florida which likely is burdened with some of the largest at-risk population density.
+
+In the 12 metro areas measured, 8 have less than 10 hospitals, with an average of 6 and a minimum of 2.
+
+Tallahasee has the least ICU beds available at any given time, and ranks as one of the most overburdened metro areas with a single bed available for every ~2700 high risk individuals
+
+Miami Fort Lauderdale area ranks as having the highest number of hospitals with a grand count of 43 - due to its population burden however, it only has a bed available for every ~1700 high risk residents.
+
+On average in Florida, there is a ratio of roughly 2-6 ICU beds available for every 10k people deemed high risk.
+
+```
+
