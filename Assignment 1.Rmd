@@ -1,5 +1,5 @@
 ### Assignment 1
-Cassandra Boylan
+Cassandra Boylan  
 08/29/2021
 
 # Introduction
@@ -8,14 +8,14 @@ In this analysis, I took a look at a dataset that examined the "at risk populati
 
 [link](https://fivethirtyeight.com/features/how-one-high-risk-community-in-rural-south-carolina-is-bracing-for-covid-19/)
 
-```{r load libraries message=FALSE}
+```{r message=FALSE, warning=FALSE}
 
 library(dplyr)
 library(tidyverse)
 library(stringr)
 ```
 
-##Importing Dataset
+### Importing Dataset
 ```{r import dataset}
 
 urlfile=("https://raw.githubusercontent.com/fivethirtyeight/data/master/covid-geography/mmsa-icu-beds.csv")
@@ -23,7 +23,7 @@ urlfile=("https://raw.githubusercontent.com/fivethirtyeight/data/master/covid-ge
 state_icu_beds<-read_csv(url(urlfile),show_col_types = FALSE)
 ```
 
-## Renaming Columns
+### Renaming Columns
 ```{r}
 names(state_icu_beds)[1] <- "city_state"
 names(state_icu_beds)[7] <- "high_risk_population"
@@ -66,18 +66,17 @@ icu_beds <- state_icu_beds_clean$icu_beds
 fivenum(icu_beds)
 ```
 
-##Metro Area with fewest count of ICU beds
+### Metro Area with fewest count of ICU beds
 ```{r}
-print ("Metro Area with fewest icu beds")
 state_icu_beds_clean[which.min(state_icu_beds_clean$icu_beds),0:2]
 ```
 
-##Metro Area with greatest count of ICU beds
+### Metro Area with greatest count of ICU beds
 ```{r}
 state_icu_beds_clean[which.max(state_icu_beds_clean$icu_beds),0:2]
 ```
 
-### Number of urban areas analyzed per state 
+#### Number of urban areas analyzed per state 
 ```{r}
 metro_by_state <- state_icu_beds_clean %>% count(state, sort=TRUE)
 head(metro_by_state)
@@ -101,7 +100,9 @@ main="Hospitals per FL metro area",
 xlim=c(0,30),
 col="blue")
 ```
-## FL Metro Area with highest count of Hospitals
+
+
+### FL Metro Area with highest count of Hospitals
 ```{r}
 by_state_FL[which.max(by_state_FL$hospitals),]
 ```
@@ -114,7 +115,7 @@ select(by_state_FL, metro_area, icu_beds,hospitals,high_risk_pop_per_icu_bed) %>
 fivenum(icu_beds_FL)
 ```
 
-## Determine Ratio of ICU beds available for Every 10k of population deemed at risk in FL
+## Florida Ratio of ICU beds available per 10k of high risk population
 ```{r}
 by_state_FL$icu_beds_per_10k <- round(icu_beds_FL/(at_risk_FL/10000),digits=2)
 icu_per_10k <- by_state_FL$icu_beds_per_10k
@@ -128,7 +129,7 @@ xlim=c(0,10),
 col="chartreuse4")
 ```
 
-## Determine Avg ICU Beds per Hospital in FL metro areas
+## Avg ICU Beds per Hospital in FL Metro Areas
 ```{r icu beds per hospital}
 by_state_FL$icu_beds_per_hospital <- round(icu_beds_FL/hospitals_FL,digits=0)
 beds_per_hospital <- by_state_FL$icu_beds_per_hospital
