@@ -1,0 +1,61 @@
+Movie_Title,Viewer_Rating,Movie_Genre,Viewer,Gender,Age,Viewer_Favorite_Genre
+Parasite,5,drama,Sam,M,27,action
+Parasite,5,drama,Jack,M,23,drama
+Parasite,5,drama,Bonnie,F,59,drama
+Parasite,NULL,drama,Santa,F,65,comedy
+Parasite,5,drama,Kristen,F,29,comedy
+Parasite,5,drama,Emily,F,28,drama
+Parasite,4,drama,Rachel,F,31,action
+Parasite,4,drama,Mike,M,33,action
+Parasite,3,drama,Richie,M,42,drama
+Parasite,5,drama,John,M,63,comedy
+"Avengers: End Game",5,action,Sam,M,27,action
+"Avengers: End Game",5,action,Jack,M,23,drama
+"Avengers: End Game",NULL,action,Bonnie,F,59,drama
+"Avengers: End Game",4,action,Santa,F,65,comedy
+"Avengers: End Game",5,action,Kristen,F,29,comedy
+"Avengers: End Game",NULL,action,Emily,F,28,drama
+"Avengers: End Game",5,action,Rachel,F,31,action
+"Avengers: End Game",5,action,Mike,M,33,action
+"Avengers: End Game",4,action,Richie,M,42,drama
+"Avengers: End Game",5,action,John,M,63,comedy
+Us,3,drama,Sam,M,27,action
+Us,4,drama,Jack,M,23,drama
+Us,5,drama,Bonnie,F,59,drama
+Us,2,drama,Santa,F,65,comedy
+Us,4,drama,Kristen,F,29,comedy
+Us,4,drama,Emily,F,28,drama
+Us,NULL,drama,Rachel,F,31,action
+Us,5,drama,Mike,M,33,action
+Us,2,drama,Richie,M,42,drama
+Us,2,drama,John,M,63,comedy
+"Knives Out",4,comedy,Sam,M,27,action
+"Knives Out",5,comedy,Jack,M,23,drama
+"Knives Out",5,comedy,Bonnie,F,59,drama
+"Knives Out",5,comedy,Santa,F,65,comedy
+"Knives Out",5,comedy,Kristen,F,29,comedy
+"Knives Out",4,comedy,Emily,F,28,drama
+"Knives Out",3,comedy,Rachel,F,31,action
+"Knives Out",5,comedy,Mike,M,33,action
+"Knives Out",3,comedy,Richie,M,42,drama
+"Knives Out",5,comedy,John,M,63,comedy
+"Little Women",NULL,drama,Sam,M,27,action
+"Little Women",NULL,drama,Jack,M,23,drama
+"Little Women",5,drama,Bonnie,F,59,drama
+"Little Women",NULL,drama,Santa,F,65,comedy
+"Little Women",5,drama,Kristen,F,29,comedy
+"Little Women",4,drama,Emily,F,28,drama
+"Little Women",3,drama,Rachel,F,31,action
+"Little Women",NULL,drama,Mike,M,33,action
+"Little Women",NULL,drama,Richie,M,42,drama
+"Little Women",NULL,drama,John,M,63,comedy
+Booksmart,NULL,comedy,Sam,M,27,action
+Booksmart,5,comedy,Jack,M,23,drama
+Booksmart,4,comedy,Bonnie,F,59,drama
+Booksmart,5,comedy,Santa,F,65,comedy
+Booksmart,5,comedy,Kristen,F,29,comedy
+Booksmart,NULL,comedy,Emily,F,28,drama
+Booksmart,5,comedy,Rachel,F,31,action
+Booksmart,NULL,comedy,Mike,M,33,action
+Booksmart,NULL,comedy,Richie,M,42,drama
+Booksmart,3,comedy,John,M,63,comedy
