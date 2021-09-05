@@ -1,0 +1,304 @@
+---
+title: "Assignment 2 - Movie Ratings"
+author: "Cassie Boylan"
+date: "9/5/2021"
+output:
+    prettydoc::html_pretty:
+    theme: cayman
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(plyr)
+library(dplyr)
+library(visdat)
+library(tidyverse)
+library(scales)
+
+```
+
+## Importing Data
+```{r import data movie_ratings}
+
+urlfile=("https://raw.githubusercontent.com/cassie-boylan/DATA-607/main/movie_ratings_resultset.csv")
+
+movie_ratings <- read.csv(urlfile)
+
+```
+## Introduction of the Data
+The data reported is from a survey of 10 respondents, 5 male, 5 female, who were asked to rate 6 different movies from the last 2 years.    Three of these movies were categorized as dramas, two as comedies, and one as action.  
+Those surveyed were asked to score these movies on a scale of 1 to 5 where 1 serves as the lowest possible rating, and 5 the highest.  
+  
+It should be noted there are not enough observations or samples in this survey for any reported analysis to have statistical significance.
+
+## Imputing the Data
+
+On reveiwing the structure of the dataframe pulled from the resultset of my sql movie_ratings query, I coerced column data types to the most accurate data type I wanted for my analysis.
+
+Column names have been renamed to follow r naming convention.
+
+```{r}
+str(movie_ratings)
+sum(movie_ratings$Viewer_Rating=="NULL")
+
+names(movie_ratings) <- tolower(names(movie_ratings))
+
+```
+To handle missing data in movie_ratings dataframe, I am replacing every entry of 'NULL' from the sql resultset as NA.  
+  
+Where NULL is representative of missing data entry in SQL, NA serves the same meaning in R language.  
+  
+Assigning NA to entries 'NULL' allows me to use the built-in r functionality for missing data
+
+```{r assign NA where NULL}
+movie_ratings[movie_ratings=="NULL"] <- NA
+
+```
+NA values in the particular case of this dataframe indicate where viewer surveyed did not watch the movie and did not give a rating.  
+
+```{r update column types}
+movie_ratings <- transform(movie_ratings, viewer_rating = as.numeric(viewer_rating),
+movie_genre = as.factor(movie_genre),
+viewer_favorite_genre = as.factor(viewer_favorite_genre),
+gender = as.factor(gender)
+)
+str(movie_ratings)
+```
+
+I am interested in seeing from the survey data how many movies were not seen and what percentage that makes up of the total possible rating count.  
+How many records are left once movies with rating NA are omitted?  
+In 23% of responses, or 14 observations, no rating was given.  
+```{r reviewing NA ratings}
+nrow(na.omit(movie_ratings))
+round(sum(is.na(movie_ratings))/nrow(movie_ratings),2)
+```
+
+To see that visually:
+```{r visualize missing data}
+vis_miss(movie_ratings)
+```
+
+## Handling NULL "non-response" values
+Those I surveyed indicated that of the movies they had not seen, they did not plan to see in future - indicating a lack of interest or possible distaste for the genre.
+
+People tend to see movies of genres they prefer and favorably rate those movies that speak to their taste.  This sample survey likely had non-participation bias to it, where only the movies people felt interest in and perceived that they would like did they see and have a strong opinion after viewing.  
+  
+I considered dropping the rating entries where NA exist for a particular viewer and reduce my survey responses (seen below)
+  
+```{r create a clean data frame}
+movie_ratings_clean <- movie_ratings %>%
+  # Filter to remove rows with missing rating
+  filter(!is.na(movie_ratings$viewer_rating))
+
+ggplot(movie_ratings_clean, aes(movie_genre)) + geom_bar()
+```
+
+However, because there are so few values in this sample and to account for the probable skew removing 23% of observations would create, I decided to create multiple datasets for comparison, imputing missing ratings as 3 [neutral] and 1 [hated] to see how much ratings changed depending on held assumptions that either people who avoided watching a movie would be neutral, or that people who avoided watching a movie did so because they correctly predicted they would dislike it.
+```{r impute missing values}
+#where rating is NA for 'not seen', pass new value as list to function replace_na to impute NA values
+movie_ratings_one<- movie_ratings %>% replace_na(list(viewer_rating = 1))
+
+movie_ratings_three <- movie_ratings  %>% replace_na(list(viewer_rating = 3))
+
+```
+
+## Viewership - Popularity
+#### What movie enjoyed the highest views? 
+If we analyze only on response rate, we can see which movie is the most viewed and which is the least viewed.
+
+Knives Out was seen by all 10 respondents and had the highest number of reviews submitted.
+Sadly, Little Women and Booksmart, 2 movies featuring female leads, were least popular of viewers sampled with only 40 and 60% respectively reported having seen.
+
+```{r}
+movie_ratings_clean %>%
+  count(movie_title, movie_genre) %>%
+  arrange(desc(n))
+```
+
+#### Viewership by Gender 
+
+If we broke viewership down by gender, how do movie genre and specific movies compare between those who identify as female and male?
+
+We can see that by a slight lift of +2 (but significant in a sample of 10) that more men than women watched action, and more women than men watched drama and comedy.
+```{r}
+movie_ratings_clean %>%
+  group_by(gender, movie_genre) %>%
+  summarize(views = n())
+```
+
+Only 60% of women surveyed had seen the single action movie in this survey "Avengers: End Game", compared to 100% of men.  Viewership of drama was poorest among men surveyed whereas viewership of comedy was highest among women.
+
+```{r}
+movie_ratings %>%
+  group_by(gender, movie_genre,) %>%
+  summarize(views =percent(sum(!is.na(viewer_rating))/n()))
+```
+
+Of the two movies featuring women as leads, only 40% of men surveyed had seen Booksmart, and no men reported seeing Little Women.
+```{r}
+movie_ratings %>%
+  group_by(gender, movie_title) %>%
+  summarize(views =percent(sum(!is.na(viewer_rating))/n()))  
+```
+
+
+## Ratings
+#### What movie enjoyed the highest ratings?
+
+```{r message=FALSE}
+movie_ratings_clean %>%
+  group_by(movie_title, movie_genre) %>%
+  summarize(
+    avg_rating = round(mean(viewer_rating),2)) %>%
+  arrange(desc(avg_rating))
+
+```
+
+#### What was reported the favorite movie broken down by gender?
+```{r}
+movie_ratings_clean %>%
+  group_by(gender,movie_title) %>%
+  summarize(
+    avg_rating = round(mean(viewer_rating),2)) %>%
+  top_n(1,avg_rating)
+```
+
+I also experimented with seeing how ratings are effected if we assume that movies not seen would be given the least favorable rating or a neutral rating by those who avoided or chose not to see them.
+
+#### Imputing "not seen" responses as ratings of 1
+```{r calculate average rating by movie}
+by_one <- movie_ratings_one %>% 
+  group_by(movie_title) %>%
+  summarise(
+  avg_rating = round(mean(viewer_rating),2),
+  median_rating = median(viewer_rating)
+)
+by_one
+```
+
+#### Imputing "not seen" responses as ratings of 3
+```{r}
+by_three <- movie_ratings_three %>% 
+  group_by(movie_title) %>%
+  summarise(
+  avg_rating = round(mean(viewer_rating),2),
+  median_rating = median(viewer_rating)
+)
+by_three
+```
+
+#### Which genre enjoyed the highest ratings?  
+Continuing this experiment, out of the sample surveyed, which genre of movies was rated most favorably overall?
+
+```{r calculate average rating by genre}
+movie_ratings_clean %>%
+  group_by(movie_genre) %>%
+  summarise(
+  avg_rating = round(mean(viewer_rating, na.rm=TRUE),3),
+  median_rating = median(viewer_rating, na.rm=TRUE)
+  )
+```
+
+
+#### Imputing "not seen" responses as ratings of 1
+```{r}
+movie_ratings_one %>%
+  group_by(movie_genre) %>%
+  summarise(
+  avg_rating = round(mean(viewer_rating, na.rm=TRUE),3),
+  median_rating = median(viewer_rating, na.rm=TRUE)
+  )
+```
+
+
+#### Imputing "not seen" responses as ratings of 3
+```{r}
+movie_ratings_three %>%
+  group_by(movie_genre) %>%
+  summarise(
+  avg_rating = round(mean(viewer_rating, na.rm=TRUE),3),
+  median_rating = median(viewer_rating, na.rm=TRUE)
+  )
+```
+
+### Rating by Gender
+If we broke ratings down by gender, how do movie genre and specific movies compare between those who identify as female and male?
+```{r calcuate average rating by gender, message=FALSE, warning=TRUE}
+ratings_gender_clean <- movie_ratings_clean %>%
+  group_by(movie_genre, gender) %>%
+  summarise(
+  avg_rating = round(mean(viewer_rating),3),
+  median_rating = median(viewer_rating),
+  .groups = 'drop'
+  )
+ratings_gender_clean
+```
+
+#### Imputing "not seen" responses as ratings of 3
+```{r}
+ratings_gender_three <- movie_ratings_three %>%
+  group_by(movie_genre, gender) %>%
+  summarise(
+  avg_rating = round(mean(viewer_rating),3),
+  median_rating = median(viewer_rating),
+  .groups = 'drop'
+  )
+ratings_gender_three
+```
+The rating of drama genre falls precipitously among men when operating under the assumption that movies not viewed by men can be assumed to have ratings 3 or below. 
+
+#### Imputing "not seen" responses as ratings of 1
+```{r}
+ratings_gender_one<- movie_ratings_one %>%
+  group_by(movie_genre, gender) %>%
+  summarise(
+  avg_rating = round(mean(viewer_rating),3),
+  median_rating = median(viewer_rating),
+  .groups = 'drop'
+  )
+ratings_gender_one
+```
+
+Plotting this, we can see that men rated movies categorized as drama as their lowest rated genre and action as their highest. Women rated action as lowest rated genre, and also action as their highest rated.
+```{r}
+ratings_gender_clean %>%
+  ggplot(aes(x=movie_genre, y=avg_rating, color=gender)) +
+  geom_point()
+
+```
+
+```{r}
+ratings_gender_one %>%
+  ggplot(aes(x=movie_genre, y=avg_rating, color=gender)) +
+  geom_point()
+
+ratings_gender_three %>%
+  ggplot(aes(x=movie_genre, y=avg_rating, color=gender)) +
+  geom_point()
+```
+
+### Rating By Favored Genre
+
+One last thing to look at,
+how did the assumption that people more favorably rate movies that speak to their taste bear out.  
+
+Specifically, how did those who reported their favorite genre actually rate movies in that genre they were asked to review?  
+
+From the data, we can see that those who reported their favorite genre to be comedy rated movies that were dramas least favorably and rated action and comedy movies roughly the same.
+Interesting enough, of those who reported dramas to be their favorite genre still rated movies they had seen under comedy and action as higher rated than the movies under drama.  This group did rate drama movies of the survey most favorably of the 3 groups however.
+```{r}
+movie_ratings %>%
+  select(viewer,viewer_favorite_genre) %>%
+  distinct(viewer,viewer_favorite_genre) %>%
+  count(viewer_favorite_genre, name="favored by")
+
+viewer_fav <- movie_ratings_clean %>%
+  group_by(viewer_favorite_genre, movie_genre) %>%
+  summarize(avg_rating = round(mean(viewer_rating),2))
+
+viewer_fav %>%
+  ggplot(aes(x=movie_genre,y=avg_rating,color=viewer_favorite_genre)) +
+  geom_point()
+```
+
