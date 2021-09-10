@@ -1,0 +1,70 @@
+---
+title: "Assignment 3"
+author: "Cassie Boylan"
+date: "`r Sys.Date()`"
+output: openintro::lab_report
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+
+library(stringr)
+
+```
+
+## Exercise #1
+There are 3 majors listed in this dataset that contain 'DATA' or 'STATISTICS'.  
+  
+These majors are:  
+* MANAGEMENT INFORMATION SYSTEMS AND STATISTICS  
+* COMPUTER PROGRAMMING AND DATA PROCESSING  
+* STATISTICS AND DECISION SCIENCE  
+```{r import college majors}
+
+urlfile=("https://raw.githubusercontent.com/fivethirtyeight/data/master/college-majors/majors-list.csv")
+
+majors <- read.csv(urlfile)
+```
+#### Code Option 1
+```{r}
+data_stat_majors <- grep("DATA|STATISTICS",majors$Major,value=TRUE)
+data_stat_majors
+```
+#### Code Option 2
+```{r}
+data_stat_majors <- str_detect(majors$Major,"DATA|STATISTICS")
+majors$Major[data_stat_majors]
+```
+
+## Exercise #2  
+
+This is a trick question.  The output of c() is a vector coerced to a common type; in the case provided, the input are strings, therefore the output will be a a character vector.  The code we see above is how a character vector appears in the R console as output, where each string represents an element of the character vector.  The numbering of the output indicates the index of the starting element - so 4 elements on first row, fifth element will start on 2nd row [5], 9th element starts on 3rd row [9], etc.
+
+If you wanted to control the number of elements presented on each row, you can use cat() and specify argument fill to numeric value of print width
+```{r}
+fruits_list<-cat(c("bell pepper", "bilberry", "blackberry", "blood orange", "blueberry", "cantaloupe", "chili pepper", "cloudberry", "elderberry", "lime", "lychee", "mulberry", "olive", "salal berry"),fill=45)
+```
+
+## Exercise #3 
+<span style="color: blue;">Note: escape characters were used in the rmarkdown of this assigment to escape special meaning for formatting.  
+Answers for pattern matching expressions can be read/referenced from how they appear in the html output on rpubs.</span>
+
+1. **(.)\1\1** will match any string containing a character repeated 3x sequentially
+
+2. **"(.)(.)\\\2\\\1"** will match a very short palindrome where 2nd character will repeat sequentially and be followed by repeat of 1st character (ex: abba)
+
+3. **(..)\1** will match sequentially repeating character pair (ex:chch)
+
+4. **"(.).\\\1.\\\1"** will match strings that are length of 5 where a character repeats at 1st, 3rd, and 5th index (ex: bebab)
+
+5. __"(.)(.)(.).\*\\\3\\\2\\\1"__ will match strings that are at least 6 characters long where first 3 characters of string are also the last 3 characters in reverse order (ex: abcdcba)
+
+## Exercise #4  
+<span style="color: blue;">Note: escape characters were used in the rmarkdown of this assigment to escape special meaning for formatting.  
+Answers for pattern matching expressions can be read/referenced from how they appear in the html output on rpubs.</span>
+
+1. Start and end with the same character:   __^(.)\.\*\1$__
+
+2. Contain a repeated pair of letters (e.g. "church" contains "ch" repeated twice):   __(..).\*\1__
+
+3. Contain one letter repeated in at least three places (e.g. "eleven" contains three "e"s.):   __(.).\*\1.\*\1__
