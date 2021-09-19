@@ -1,0 +1,321 @@
+---
+title: "DATA 607 - Project 1"
+author: "Cassie Boylan"
+date: "9/16/2021"
+output: 
+    prettydoc::html_pretty:
+    theme: cayman
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message = FALSE)
+```
+
+Loading libraries to use
+```{r warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(plyr)
+library(stringr)
+library(readr)
+library(data.table)
+library(visdat)
+library(scales)
+```
+
+## Actions Performed for Cleaning and Manipulation
+
+  1. Read in text file
+  
+  2. View Structure/Glimpse the Data/Search for Missing values
+ 
+  3. Reshape the dataset to drop junk rows, column containing all NA values
+
+  4. Rename columns with accurate variable names
+  
+  5. Subset columns and rows to pull out true data points from junk data through the use of select() and filtering via regular expressions
+ 
+ 6. Create new columns/variables to hold Pre-Tournament Rating Score and Post-Tournament Rating Score of contestants
+  
+ 7. Collapse "Round 1"- "Round 7" columns into single column/variable "Round" to track the round number
+ 
+ 8.  Create new columns/variables to hold Game Outcome and Opponent Pair Id from each round played by contestant
+
+8.  Join transformed subsets by pair id into single     data set
+   
+ 9. Match opponent pair id of each round to their contestant pre-score rating through join
+   
+ 10. Perform vectorized aggregate calculation of opponent pre-rating average by contestant id and save result as new dataset
+  
+ 11. Match opponent pre-rating average to contestant through join
+ 
+ 12. Subset to only variables requested and reorder columns to create final dataframe
+ 
+ 13. Write final dataframe to new csv file and specify path and file name to save file
+ 
+ 14. Extra Credit -  
+      ELO performance rating calculation,   
+      FIDE performance rating calculation
+ 
+## Importing the Data
+```{r read-in-data}
+
+tournament <- read.table('https://raw.githubusercontent.com/cassie-boylan/DATA-607/main/tournamentinfo.txt', 
+          stringsAsFactors = FALSE,
+           sep = "|",
+           nrows = -1,
+           skip = 1,
+           fill = TRUE,
+           strip.white = TRUE,
+           comment.char = "",
+           allowEscapes = TRUE)
+
+```
+
+## Introducting the Data
+The dataset used in this exercise is a txt file containing the information of 64 contestants in a chess tournament: their name, state, pre-tournament rating score and the rounds played - including the opponents contestants played in each round and whether they won, lost, drew or if the round was not played.  The data, while having some structure, is not maintained in a tidy or tabular way.
+
+I will be utilizing the stringr package, regular expressions, and tidyr verbs to transform the data of this file into a consistent tabular format.  I will be utilizing dplyr verbs to subset variables and observations, to create new columns to hold the additional variables established, and to perform mutating joins on the cross tables established per subsetting.
+
+Once the data has been standardized so that each variable of the dataset is in its own column, and each contestant its own observation/row, I will perform calculations to determine the avg pre-rating score of all opponents that each contestant faces in the tournament.  I will also calculate the ELO performance rating of each contestant based on their wins/losses/opponent performance rating as well as the FIDE performance rating based on their total points/opponent performance rating and number of games played.
+
+## Assessing Data Structure & Tidiness
+```{r}
+vis_miss(tournament)
+head(tournament)
+str(tournament)
+```
+## Reshape / Rename Tournament Dataset
+
+### Reshape Data Table
+```{r drop-duplicate-header & extra-column}
+tournament_clean <- tournament[-c(1:3), -11]
+```
+
+### Reindex Data Table
+```{r reindex reshaped data table}
+rownames(tournament_clean) <- 1:nrow(tournament_clean)
+```
+
+### Set Column Names
+```{r set-column-names}
+names(tournament_clean)[1] <- "state"
+names(tournament_clean)[2] <- "name"
+names(tournament_clean)[3] <- "total_points" 
+names(tournament_clean)[4:10] <- paste0("R", 1:7)
+```
+
+## Subset Variables & Observations 
+
+I am filtering to pick out the rows with actual data values via the use of regular expressions
+```{r subset id-player_name-points data}
+contestants <- tournament_clean %>% 
+  filter(grepl("[0-9]",state)) %>%
+  transmute(
+    id = as.numeric(state),
+    name, 
+    total_points = as.numeric(total_points))
+
+```
+
+```{r subset state-id-and-prescore data}
+score_rtgs <- tournament_clean %>% 
+  select(state, pre_score_raw = name,) %>%
+  filter(state %in% c(grep("^[A-Z]+",state, value=TRUE)))
+```
+
+```{r}
+rounds_tmp <- tournament_clean %>%
+  select(id = state, starts_with("R")) %>%
+  filter(grepl("[0-9]",id)) %>%
+  gather(round_no, outcome_tmp, R1:R7)
+
+```
+
+## Establish New Columns to Hold Each Identified Variable
+
+```{r extract-score-with-tmp-columns}
+score_rtgs <- score_rtgs %>% separate(pre_score_raw, into=c("USCF ID","Rtg (Pre->Post)"),sep="/")
+
+score_rtgs <- score_rtgs %>% separate("Rtg (Pre->Post)", into=c("rtg_pre","rtg_post"), sep="->")
+```
+
+## Perform String Extractions
+
+I am utilizing stringr verbs and regular expressions to extract actual data value contained in cell
+
+## Perform Column DataType Coercing for Variables that are Numeric
+
+I am utilizing transmute & as.datatype() to coerce variables to the datatype they should be so they can be utilized in subsequent calculations
+```{r}
+score_rtgs <- score_rtgs %>%
+  mutate(rtg_pre = str_extract(rtg_pre,"[0-9]{3,4}"),
+         rtg_post = str_extract(rtg_post,"[0-9]{3,4}"))
+
+score_rtgs <- score_rtgs %>%
+  transmute(
+    state,
+    rtg_pre = as.numeric(rtg_pre),
+    rtg_post = as.numeric(rtg_post))
+
+score_rtgs <- tibble::rowid_to_column(score_rtgs, "id")
+
+str(score_rtgs)
+```
+
+```{r extract-transform-rounds-data}
+
+rounds_tmp <- rounds_tmp %>% 
+  transmute(id = as.numeric(id),
+  round_no = str_extract(round_no,"\\d+"),
+  outcome = str_extract(outcome_tmp,"^[A-Z]{1}"),
+  opp_id = as.numeric(str_extract(outcome_tmp,"\\d+")
+))
+
+str(rounds_tmp)
+```
+
+## Merge Clean Data Subsets
+```{r merge-clean-data}
+
+new_df <- inner_join(contestants,score_rtgs, by="id")
+
+setcolorder(new_df,c("id","state","name","total_points","rtg_pre","rtg_post"))
+
+str(new_df)
+```
+
+```{r}
+tmp2 <- left_join(rounds_tmp, new_df[c("id","rtg_pre")], by=c("opp_id" ="id"))
+
+str(tmp2)
+```
+
+## Explore Tournament Outcome Results
+
+How many rounds were played that resulted in a win/lose or draw in the tournament?  
+
+```{r}
+rounds_tmp %>%
+  filter(grepl("[WLD]",outcome)) %>%
+  count("outcome")
+```
+
+What percentage does this represent?
+```{r}
+percent(length(which(grepl("[WLD]",tmp2$outcome)))/nrow(tmp2),2)
+```
+
+How many rounds were not played in the tournament?  
+```{r}
+length(which(grepl("[U]",tmp2$outcome)))
+```
+
+What percentage of total rounds does this represent?
+```{r}
+percent(length(which(grepl("[U]",tmp2$outcome)))/nrow(tmp2),2)
+```
+
+How many games overall did not result in a Win/Lose/Draw and did not contribute to performance rating score?
+```{r}
+rounds_tmp %>%
+  filter(grepl("[^WLD]",outcome)) %>%
+  count("outcome")
+```
+
+What percentage of non- Win/Lose/Draw of all rounds does this represent?
+```{r}
+percent(length(which(grepl("[^WLD]",tmp2$outcome)))/nrow(tmp2),2)
+```
+## Calculate Average Pre-Score Rating of All Opponents Each Contestant Faced
+```{r}
+pre_avg <- aggregate( rtg_pre ~ id, tmp2, mean )
+colnames(pre_avg) <- c("id","pre_rtg_avg")
+pre_avg$pre_rtg_avg <- round(pre_avg$pre_rtg_avg, 0)
+
+str(pre_avg)
+
+```
+
+```{r}
+df_opponent_avg<- inner_join(new_df, pre_avg, on="id")
+```
+## Reshape Dataset to Show Only Requested Variables
+```{r}
+final_df <- df_opponent_avg %>%
+  select(-c("id","rtg_post")) %>%
+  relocate(name, .before = state)
+```
+
+## Save Dataset as .csv file
+```{r}
+write.csv(final_df, "C:\\Users\\cassi\\Documents\\DATA 607_Fall2021\\project1.csv",row.names = TRUE)
+```
+
+## Calculating ELO Performance
+$$ELO  = \text{ total of opponents ratings + 400 x (Wins - Losses) / Number of Games}$$
+```{r}
+outcome_count<- tmp2 %>%
+  filter(grepl("[WLD]",outcome)) %>%
+  group_by(id,outcome)%>%
+  tally()
+
+outcome_count <- pivot_wider(outcome_count, names_from = "outcome",values_from = "n")
+
+outcome_count[is.na(outcome_count)] = 0
+
+outcome_count <- outcome_count %>%
+  mutate(add_wins = W*400,
+         add_losses = L*-400,
+         num_games = D+L+W,
+         ELO_calc1 = add_wins + add_losses)
+
+sum_rtg <- aggregate( rtg_pre ~ id, tmp2, sum )
+colnames(sum_rtg) <- c("id","pre_rtg_sum")
+
+sum_rtg$pre_rtg_sum <- round(sum_rtg$pre_rtg_sum, 0)
+str(sum_rtg)
+
+```
+
+```{r}
+elo_rtg_df <- inner_join(outcome_count,sum_rtg, on="id")
+
+elo_rtg_df <- elo_rtg_df %>%
+  mutate(ELO_perf_rating = round((ELO_calc1+pre_rtg_sum)/num_games),0)
+```
+
+## Calculating FIDE Performance
+$$FIDE = \text{ Opponents' Rating Average + Rating Difference}$$
+$$RatingsDifference (d_p)= \text{Lookup of }p$$
+$$Tournament Percentage Score (p) = \text{ Total Points Scored / Number of Games Played}$$
+```{r read-in fractionsal-score lookup table}
+lookup <- read.csv("https://raw.githubusercontent.com/cassie-boylan/DATA-607/main/FIDE_fractional_score_rating_lookup.csv")
+
+str(lookup)
+```
+
+```{r}
+fide_df <- left_join(df_opponent_avg,
+                     outcome_count %>% dplyr::select(id, num_games),
+                     by="id")
+
+fide_df <- fide_df %>%
+  mutate(tourn_perc_score = round(total_points/num_games,2))
+```
+
+```{r}
+fide_df <- left_join(fide_df,lookup, by = c("tourn_perc_score" = "p"))
+
+fide_df <- fide_df %>%
+  mutate(fide_perf_rtg = pre_rtg_avg + dp)
+```
+
+```{r}
+final_df_ec <- left_join(new_df,elo_rtg_df %>%
+                           dplyr::select(id, ELO_perf_rating), by="id")
+
+final_df_ec <- left_join(final_df_ec,fide_df %>%
+                           dplyr::select(id, fide_perf_rtg), by="id")
+```
+
