@@ -1,0 +1,145 @@
+---
+title: "Assignment Week 5"
+author: "Cassie Boylan"
+date: "9/26/2021"
+output:     
+  prettydoc::html_pretty:
+    theme: cayman
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r load packages}
+library(dplyr)
+library(tidyr)
+library(tidyverse)
+library(reshape2)
+library(readxl)
+library(httr)
+```
+
+## Importing the Data
+
+```{r}
+cnames <- read_csv("https://raw.githubusercontent.com/cassie-boylan/DATA-607/main/israeli_vax_data.csv", n_max=0,show_col_types=FALSE) %>% names()
+
+vax_info <- read_csv("https://raw.githubusercontent.com/cassie-boylan/DATA-607/main/israeli_vax_data.csv", col_types = "cnnnnl", na = c(""," ","NA"), skip = 1, )
+```
+## Introducting the Data
+The dataset used in this exercise is a tabular count of the population fully vaccinated against covid-19 and not vaccinated by age group below and above 50 years of age.  Severe cases by 100K of the population are also included in this dataset.  I will be tidying the data before calculating total population and efficacy of the vaccine by comparing percentage of severe case frequency among vaccinated and non-vaccinated age groups.
+
+### Renaming the Columns
+
+```{r}
+
+cnames <- cnames[c(-3,-5)]
+cnames
+```
+
+```{r rename-columns}
+names(vax_info)[1] <- cnames[1]
+names(vax_info)[2] <- "not_vaxed"
+names(vax_info)[3] <- "fully_vaxed"
+names(vax_info)[6] <- cnames[4]
+```
+
+### Replacing NA values
+```{r}
+vax_info <- vax_info %>% fill(Age)
+
+```
+
+## Subsetting,  Melting & Establishing New Variable Columns 
+```{r}
+vaxed <- select(vax_info, Age, fully_vaxed, not_vaxed)
+
+vaxed <- melt(vaxed, id="Age", variable.name = "vax_status", value.name = "total")
+
+percent = subset(vaxed, vaxed$total < 100) %>%
+  transmute(Age,
+            vax_status,
+            percent = total/100)
+
+population = subset(vaxed, vaxed$total > 100)
+
+```
+
+## Joining Tidied Subsets Back Together
+```{r}
+vaxed <- inner_join(percent,population, by=c("Age","vax_status"))
+
+names(vaxed)[names(vaxed) == "percent"]<- cnames[2]
+names(vaxed)[names(vaxed) == "total"]<- "Population"
+
+```
+
+```{r}
+severe_cases <- select(vax_info,Age,4:5) %>% group_by(Age)
+
+severe_cases <- melt(severe_cases, na.rm = TRUE, id="Age",variable.name = "vax_status", value.name = "per_100K")
+
+severe_cases <- severe_cases %>%
+  transmute(Age,
+            vax_status = ifelse(
+                            grepl("Not",vax_status),
+                        "not_vaxed","fully_vaxed"),
+          per_100K)
+
+```
+```{r}
+final_df <- inner_join(vaxed,severe_cases,by=c("Age","vax_status"))
+```
+
+### Determining Proportion of Population Partially Vaxed
+
+There are 3 population subsets being observed - those who are not vaccinated, those who are fully vaccinated and the small percentage that have only received 1 dose.
+```{r}
+partial_vax <- final_df %>% group_by(Age) %>%
+  summarize(
+    partial_vax_perc = 1 - (sum(`Population %`))
+  )
+```
+
+## Calculating Total Population
+```{r}
+final_df <- final_df %>% group_by(Age,vax_status) %>%
+  mutate(
+    Total_Population = prettyNum(Population / `Population %`,big.mark = ",")
+  )
+```
+
+## Calculating Efficacy
+
+I am subsetting to view the severe cases in which hospitalization has occurred.  For this analysis, I am creating a wide structure to better separate those cases per the populations of vaccinated and unvaccinated.
+
+```{r}
+final_df_severe <- final_df %>% select(Age, vax_status,per_100K) %>% pivot_wider(names_from=vax_status, values_from=per_100K)
+```
+
+We can observe the efficacy rate is 97.44% among the population younger than 50 years of age.
+
+The efficacy rate is 83.04% among the population greater than 50 years of age.
+
+This indicates that of those who received the vaccine, a 97% and 83% reduction in hospitalization was observed over the population that did not get vaccinated.
+
+```{r}
+final_df_severe %>% mutate(
+  Efficacy = round(1 - ((fully_vaxed/100000) / (not_vaxed/10000)),4)
+  )
+```
+
+## Comparing Severe Case Rate Among Vaccinated & Unvaccinated
+
+Here we can see that out of the population who have been fully vaccinated, there are only 5 cases per 100k.  Out of the population that have not been vaccinated, the severe case rate triples to 16 cases per 100k.
+```{r}
+rate_df <- final_df %>%
+  select(vax_status, Population, per_100K) %>% 
+  group_by(vax_status) %>%
+ summarize(severe_total = sum(per_100K),
+         pop_total = sum(Population)/100000,
+         rate = severe_total/pop_total,
+         .groups = "drop")
+```
+
