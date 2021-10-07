@@ -1,0 +1,8 @@
+{ 
+   "Title":["The Trespasser","Frankenstein","Uprooted", "Vicious","Missing, Presumed","Stay Sexy & Dont Get Murdered"],
+   "Author":["Tana French","Mary Shelley","Nadia Novik","V.E. Schwab", "Susie Steiner", "Karen Kilgariff,Georgia Hardstark"],
+   "Rating":[4.41,4.53,4.07,4.20,3.49,4.09], 
+   "Genre":[ "Mystery","Classics","Fantasy","Fantasy","Mystery","Memoir"],
+   "Year":[ "2016","1818","2015","2013","2016","2019"],
+   "Publisher":["Penguin","Signet Classics","Del Ray","Tor Books", "Random House", "Forge Books"]
+}
