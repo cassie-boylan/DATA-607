@@ -1,0 +1,56 @@
+<books>
+	<book>
+		<title> The Trespasser </title>
+		<author>Tana French</author>
+		<rating>4.41</rating>
+		<genre>Mystery</genre>
+		<year>2016</year>
+		<publisher>Penguin</publisher>
+	</book>
+	
+	<book>
+		<title> Frankenstein </title>
+		<author> Mary Shelley </author>
+		<rating>4.53</rating>
+		<genre>Classics</genre>
+		<year>1818</year>
+		<publisher>Signet Classics</publisher>
+	</book>
+	
+	<book>
+		<title> Uprooted </title>
+		<author>Naomi Novik</author>
+		<rating>4.07</rating>
+		<genre>Fantasy</genre>
+		<year>2015</year>
+		<publisher>Del Ray</publisher>
+	</book>
+	
+	<book>
+		<title> Vicious </title>
+		<author>V.E. Schwab</author>
+		<rating>4.20</rating>
+		<genre>Fantasy</genre>
+		<year>2013</year>
+		<publisher>Del Ray</publisher>
+	</book>
+
+	<book>
+		<title> Missing,Presumed </title>
+		<author>Susie Steiner</author>
+		<rating>3.49</rating>
+		<genre>Mystery</genre>
+		<year>2016</year>
+		<publisher>Random House</publisher>
+	</book>	
+
+	<book>
+		<title> Stay Sexy & Dont Get Murdered </title>
+		<author>Karen Kilgariff</author>
+		<author>Georgia Hardstark</author>
+		<rating>4.09</rating>
+		<genre>Memoir</genre>
+		<year>2019</year>
+		<publisher>Forge Books</publisher>
+	</book>	
+</books>
