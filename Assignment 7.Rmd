@@ -1,0 +1,47 @@
+---
+title: "Assignment 7"
+author: "Cassie Boylan"
+date: "10/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE)
+
+```
+
+```{r message=FALSE}
+library("XML")
+library("methods")
+library("rjson")
+library("httr")
+library("htmltab")
+library("RCurl")
+```
+
+## Introduction
+The purpose of this assignment is to familiarize ourselves with the structures of json, extended markup language and html and how each stores objects and attributes.  We generated a simple dataset of books with attributes such as title, author and publish date and created a separate file for each language to represent these books and attributes contained.  These files were then read into r utilizing specific packages for this purpose and transformed into tidy dataframes for further use.
+
+```{r json}
+#read json file into R
+books_json <- fromJSON(file="https://raw.githubusercontent.com/cassie-boylan/DATA-607/main/books_json_version.json")
+
+#Convert json output to data frame
+books_json_data_frame <- as.data.frame(books_json)
+print(books_json_data_frame)
+```
+
+```{r xml}
+
+#Convert xml output to data frame
+books_xml_dataframe <- xmlToDataFrame("booksv2.xml")
+print(books_xml_dataframe)
+```
+
+```{r html}
+books_html <- htmltab("https://raw.githubusercontent.com/cassie-boylan/DATA-607/main/books.html", which =1)
+
+print(books_html)
+
+```
+
