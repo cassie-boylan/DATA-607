@@ -1,0 +1,54 @@
+---
+title: "Assignment 7"
+author: "Cassie Boylan"
+date: "10/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE, warning=FALSe}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE)
+getwd()
+```
+
+```{r message=FALSE}
+install.packages("rjson")
+install.packages("XML")
+```
+
+```{r message=FALSE}
+library("XML")
+library("methods")
+library("rjson")
+library("httr")
+library("htmltab")
+library("RCurl")
+```
+
+
+```{r json}
+
+books_json <- fromJSON(file="https://raw.githubusercontent.com/cassie-boylan/DATA-607/main/books_json_version.json")
+print(books_json)
+
+#Convert json output to data frame
+books_json_data_frame <- as.data.frame(books_json)
+print(books_json_data_frame)
+```
+
+```{r xml}
+#url_xml <- "https://raw.githubusercontent.com/cassie-boylan/DATA-607/main/book.xml"
+#data_xml <- GET(url_xml)
+#books_xml <- xmlParse(url_xml)
+
+#Convert xml output to data frame
+#books_xml_dataframe <- xmlToDataFrame("booksv2.xml")
+#print(books_xml_dataframe)
+```
+
+```{r html}
+books_html <- htmltab("https://raw.githubusercontent.com/cassie-boylan/DATA-607/main/books.html", which =1)
+
+print(books_html)
+
+```
+
