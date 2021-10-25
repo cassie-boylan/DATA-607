@@ -1,0 +1,116 @@
+---
+title: "Assignment 9"
+author: "Cassie Boylan"
+date: "10/24/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message = FALSE)
+
+```
+
+## Loading Libraries
+```{r warning=FALSE}
+library(dplyr)
+library(tidyverse)
+library(httr)
+library(jsonlite)
+library(rlist)
+```
+
+# Making HTTP Request via API
+I assigned the below http request to a local variable called url.  My selection criteria is looking for books by the author Naomi Novik and which if any of her novels have made it to the NYT best sellers list.  My second query parameter is the api-key assigned to me by NYT for authentication to use this API.  
+```{r}
+
+url <- "https://api.nytimes.com/svc/books/v3/lists/best-sellers/history.json?author=Naomi%20Novik&api-key=AaML1lfAaLB6s04LSukIZzGrUEkC4mrC"
+
+api_key <- "AaML1lfAaLB6s04LSukIZzGrUEkC4mrC"
+
+```
+
+I am utilizing a GET request to call the server to return a response per my query parameters and utilizing content() to examine response.  Setting return format as text allows passing in the response to fromJSON function which converts into a named list for easier manipulation in R.
+```{r}
+#query_params <- list(author="Naomi%20Novik")
+resp <- GET(url)
+
+#,add_headers('Authorization' = paste("Authorization: ", api_key))
+
+resp<- content(resp, as ="text")
+result <- fromJSON(resp, flatten = TRUE)
+
+#db_result <- result %>% bind_rows() %>% mutate(results = rep(names(result), map_dbl(result, nrow)))
+#db_result <- db_result %>% bind_rows()
+db_result <- result$results
+
+```
+
+## Transforming the Results Returned Into Data Frame
+I utilized unnest to include the columns and observations of the nested dataframes within results returned.  This was done in order to review the full scope of results (i.e. all books and their respective weeks on best sellers list).  Of the 6 published books under her name, 3 have made the best sellers list although only one has been reviewed by the New York Times.
+```{r}
+db_result_long <- db_result %>% unnest_longer(ranks_history) %>% as.data.frame()
+
+db_result_longer <- db_result_long %>% unnest_longer(reviews) %>% select(-contains("isbn")) %>% as.data.frame()
+
+str(db_result_longer)
+head(db_result_longer)
+
+```
+
+## Everything Below Were Attempts to Transform Nested JSON results into more cohseive tabular form
+
+```{r}
+#attempt to rename all column headers removing ranks_history prefix
+db_result_longer <- rename_with(db_result_longer, ~ gsub("ranks_history.", "", .x, fixed = TRUE))
+```
+
+```{r}
+#efforts made to corral nested dataframes to enable accessing and manipulation
+rank_history <- db_result$rank_history
+reviews <- db_result$reviews
+
+titles <- db_result$title
+names(reviews) <- titles
+reviews <- as.data.frame(reviews)
+
+reviews <- pivot_longer(reviews, cols=-1, names_to="vars", values_to="vals")
+```
+
+
+```{r}
+raw_db <- enframe(unlist(result)) %>% slice(-c(1,2,3))
+```
+credit for syntax structure:
+https://www.r-bloggers.com/2018/10/converting-nested-json-to-a-tidy-data-frame-with-r/
+```{r}
+raw_wide <- raw_db %>% pivot_wider(names_from=name, names_prefix="", values_from=value)
+
+raw_long <- raw_wide %>% pivot_longer(cols=1:6,names_to="title_placeholder",values_to="title")
+
+raw_long <- raw_long %>% pivot_longer(cols=1:6,names_to="descr_placeholder",values_to="description")
+
+raw_long <- raw_long %>% pivot_longer(cols=7:12,names_to="author_placeholder",values_to="author")
+```
+```{r}
+raw_long <-  raw_long %>% select(-contains(c("placeholder","isbn")))
+
+raw_long <- raw_long %>% select(title, description, author, contains("published_date"), contains("bestsellers_date"), contains("book_review_link"))
+```
+
+### Attempting to Perform Manipulation to pull out only books that were listed on NYT bestseller list and in which the NYT provieded a review
+```{r}
+author <- db_result %>% select(title, description, author) %>% filter(!description=="")
+
+history <- as.data.frame(db_result$ranks_history) %>% select(bestsellers_date, weeks_on_list) %>% filter(!weeks_on_list == 0) %>% distinct()
+
+review <- as.data.frame(db_result$reviews)  %>% select(book_review_link.2)
+
+```
+
+```{r}
+#tying subsets back together but got stuck in how to tie back nested dataframes
+db_result_clean <- db_result %>% 
+  bind_cols(history) %>%
+  bind_cols(review) %>% select(-c(reviews,isbns,ranks_history)) 
+```
+
